@@ -399,23 +399,10 @@ func (kw *kubeUnit) runWorkUsingLogger() {
 	}
 
 	go func() {
+		var sinceTimeString string
+		var lastLineWritten string
 		for {
-			var sinceTimeString string
-
 			if errStdin != nil {
-				break
-			}
-
-			kw.pod, err = kw.clientset.CoreV1().Pods(ked.KubeNamespace).Get(kw.ctx, ked.PodName, metav1.GetOptions{})
-			if err != nil {
-				errMsg = fmt.Sprintf("Error getting pod %s/%s: %s", ked.KubeNamespace, ked.PodName, err)
-				kw.UpdateBasicStatus(WorkStateFailed, errMsg, 0)
-				logger.Error(errMsg)
-				break
-			}
-
-			if kw.pod.Status.Phase != corev1.PodRunning {
-				logger.Info("Pod %s/%s is not in Running state: %s", ked.KubeNamespace, ked.PodName, kw.pod.Status.Phase)
 				break
 			}
 
@@ -430,7 +417,7 @@ func (kw *kubeUnit) runWorkUsingLogger() {
 
 			logStream, err := logReq.Stream(kw.ctx)
 			if err != nil {
-				errMsg := fmt.Sprintf("Error opening pod %s/%s stream: %s", ked.KubeNamespace, ked.PodName, err)
+				errMsg := fmt.Sprintf("Error opening pod %s/%s stream: %s", ked.KubeNamespace, kw.pod.Name, err)
 				kw.UpdateBasicStatus(WorkStateFailed, errMsg, 0)
 				logger.Error(errMsg)
 				break
@@ -438,15 +425,33 @@ func (kw *kubeUnit) runWorkUsingLogger() {
 
 			streamReader := bufio.NewReader(logStream)
 
-			for errStdin != nil { //check between every line read to see if i need to stop reading
+			for { //check between every line read to see if i need to stop reading
 				line, err := streamReader.ReadString('\n')
+				errStdout = err
 				if err != nil {
+					break
+				}
+				if line == lastLineWritten {
 					break
 				}
 				split := strings.SplitN(line, " ", 2)
 				sinceTimeString = split[0]
 				msg := split[1]
 				stdout.Write([]byte(msg))
+				lastLineWritten = strings.Clone(line)
+			}
+
+			kw.pod, err = kw.clientset.CoreV1().Pods(ked.KubeNamespace).Get(kw.ctx, kw.pod.Name, metav1.GetOptions{})
+			if err != nil {
+				errMsg = fmt.Sprintf("Error getting pod %s/%s: %s", ked.KubeNamespace, kw.pod.Name, err)
+				kw.UpdateBasicStatus(WorkStateFailed, errMsg, 0)
+				logger.Error(errMsg)
+				break
+			}
+
+			if kw.pod.Status.Phase != corev1.PodRunning {
+				logger.Info("Pod %s/%s is not in Running state: %s", ked.KubeNamespace, kw.pod.Name, kw.pod.Status.Phase)
+				break
 			}
 
 			logStream.Close()

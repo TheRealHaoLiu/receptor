@@ -7,6 +7,7 @@ linters:
     - asciicheck
     - bodyclose
     #- cyclop # TODO: Reduce code complexity.
+    - deadcode
     - depguard
     - dogsled
     #- dupl # TODO: Remove duplicates.
@@ -35,6 +36,7 @@ linters:
     - gosec
     - gosimple
     - govet
+    - ifshort
     - importas
     - ineffassign
     - makezero
@@ -52,6 +54,7 @@ linters:
     - rowserrcheck
     - sqlclosecheck
     - staticcheck
+    - structcheck
     - stylecheck
     #- testpackage # TODO: Put tests in their dedicated test packages.
     #- thelper # TODO: Requires test refactoring.
@@ -60,6 +63,7 @@ linters:
     - unconvert
     #- unparam # TODO: This breaks something, look at it!
     - unused
+    - varcheck
     - wastedassign
     - whitespace
     # - wrapcheck # TODO: Errors passed upwards should be wrapped.
